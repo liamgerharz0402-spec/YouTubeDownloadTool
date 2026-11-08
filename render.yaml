@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: video-multitool-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    region: frankfurt
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: HOST
+        value: 0.0.0.0
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: FILE_RETENTION_MINUTES
+        value: 30
+      - key: MAX_CONCURRENT_DOWNLOADS
+        value: 2

@@ -1,0 +1,32 @@
+[build]
+  publish = "."
+
+# Sicherheit: Backend-Dateien dürfen über Netlify nicht öffentlich aufrufbar sein
+[[redirects]]
+  from = "/backend/*"
+  to = "/"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.git/*"
+  to = "/"
+  status = 404
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json; charset=UTF-8"

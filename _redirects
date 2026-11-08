@@ -1,0 +1,3 @@
+# Netlify Redirects & Security
+/backend/*  /  404!
+/.git/*     /  404!

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Video Multitool</title>
+
+    <!-- iOS / iPadOS Safari & PWA Meta-Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Video Multitool">
+    <meta name="theme-color" content="#0f1117">
+    <meta name="description" content="Persönliche Video-Download- und Konvertierungs-App">
+
+    <!-- Icons & Manifest -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand-section">
+                <span class="brand-icon">⚡</span>
+                <div>
+                    <h1 class="brand-title">Video Multitool</h1>
+                    <div class="brand-subtitle">Download & Konvertierung</div>
+                </div>
+            </div>
+
+            <div id="server-status-pill" class="status-pill status-offline" title="Prüfe Serververbindung...">
+                <span class="status-dot"></span>
+                <span id="server-status-text">Prüfen...</span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs" aria-label="Hauptnavigation">
+            <button class="nav-btn active" data-tab="start">
+                <span>📥</span> Start
+            </button>
+            <button class="nav-btn" data-tab="history">
+                <span>📜</span> Verlauf
+            </button>
+            <button class="nav-btn" data-tab="settings">
+                <span>⚙️</span> Einstellungen
+            </button>
+        </nav>
+
+        <!-- Offline / No Server Warning Banner -->
+        <div id="offline-warning-banner" class="offline-banner hidden">
+            <span id="banner-offline-hint">⚠️ Kein Download-Server erreichbar. Bitte Server starten oder API-URL anpassen.</span>
+            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                <button id="banner-retry-btn" class="btn btn-secondary btn-sm" type="button">🔄 Neu prüfen</button>
+                <button id="banner-open-settings-btn" class="btn btn-secondary btn-sm" type="button">⚙️ Einstellungen</button>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB 1: START / DOWNLOAD                   -->
+        <!-- ========================================== -->
+        <main id="tab-start" class="tab-view active">
+            <!-- URL Input Card -->
+            <section class="input-card">
+                <div class="input-actions-bar">
+                    <span id="platform-badge" class="platform-badge" style="display: none;">Web</span>
+                    <button id="btn-paste" class="btn btn-secondary btn-sm" type="button" title="Aus Zwischenablage einfügen">
+                        📋 Aus Zwischenablage einfügen
+                    </button>
+                </div>
+
+                <div class="input-wrapper">
+                    <input 
+                        type="url" 
+                        id="video-url-input" 
+                        class="url-input" 
+                        placeholder="Video-Link einfügen … (YouTube, TikTok, Instagram, Reddit etc.)" 
+                        autocomplete="off" 
+                        autocorrect="off" 
+                        autocapitalize="off" 
+                        spellcheck="false"
+                    >
+                    <button id="btn-clear-url" class="btn-clear" type="button" title="Eingabe leeren" style="display: none;">✕</button>
+                </div>
+
+                <button id="btn-analyze" class="btn btn-primary btn-block" type="button">
+                    Analysieren
+                </button>
+
+                <!-- Desktop Drag & Drop Hinweis -->
+                <div id="drop-zone" class="drop-zone">
+                    Oder Video-Link hierher ziehen und ablegen
+                </div>
+            </section>
+
+            <!-- Video-Analyse Resultat Card -->
+            <section id="video-card" class="media-card hidden">
+                <div class="media-preview-header">
+                    <div class="media-thumb-wrapper">
+                        <img id="video-thumbnail" class="media-thumb" src="" alt="Video Vorschau">
+                        <span id="video-duration" class="media-duration-badge"></span>
+                    </div>
+                    <div class="media-info">
+                        <h2 id="video-title" class="media-title">Titel des Videos</h2>
+                        <div id="video-uploader" class="media-uploader">Kanalname</div>
+                        <div>
+                            <span id="video-platform-name" class="badge-tag">Plattform</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modus: Video vs. Nur Audio -->
+                <div class="segmented-control">
+                    <button class="mode-tab active" data-mode="video" type="button">🎬 Video</button>
+                    <button class="mode-tab" data-mode="audio" type="button">🎵 Nur Audio</button>
+                </div>
+
+                <!-- Video Optionen -->
+                <div id="video-options-group" class="options-grid">
+                    <div class="form-group">
+                        <label for="select-video-resolution" class="form-label">Qualität / Auflösung</label>
+                        <select id="select-video-resolution" class="form-select">
+                            <!-- Wird dynamisch befüllt -->
+                            <option value="best">Beste Qualität</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="select-video-container" class="form-label">Format / Container</label>
+                        <select id="select-video-container" class="form-select">
+                            <option value="mp4">MP4 (Optimal für iPad & Desktop)</option>
+                            <option value="webm">WebM</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Audio Optionen -->
+                <div id="audio-options-group" class="options-grid hidden">
+                    <div class="form-group">
+                        <label for="select-audio-format" class="form-label">Audioformat</label>
+                        <select id="select-audio-format" class="form-select">
+                            <option value="mp3">MP3 (Universell kompatibel)</option>
+                            <option value="m4a">M4A / AAC (Apple Standard)</option>
+                            <option value="wav">WAV (Unkomprimiert)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="select-audio-bitrate" class="form-label">Bitrate / Qualität</label>
+                        <select id="select-audio-bitrate" class="form-select">
+                            <option value="320k">320 kbps (Beste Audioqualität)</option>
+                            <option value="256k">256 kbps (Sehr gut)</option>
+                            <option value="192k" selected>192 kbps (Standard)</option>
+                            <option value="128k">128 kbps (Kompakt)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Download starten Button -->
+                <button id="btn-start-download" class="btn btn-primary btn-block" type="button">
+                    Download starten
+                </button>
+            </section>
+
+            <!-- Download-Fortschritt Card -->
+            <section id="progress-card" class="progress-card hidden">
+                <div class="progress-header">
+                    <span id="progress-phase" class="progress-phase">Video wird verarbeitet …</span>
+                    <span id="progress-percent" class="progress-percent">0 %</span>
+                </div>
+
+                <div class="progress-bar-bg">
+                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                </div>
+
+                <div class="progress-stats">
+                    <span id="progress-speed"></span>
+                    <span id="progress-eta"></span>
+                </div>
+
+                <button id="btn-cancel-download" class="btn btn-secondary btn-block btn-sm" type="button">
+                    Abbrechen
+                </button>
+            </section>
+
+            <!-- Download abgeschlossen Card -->
+            <section id="completed-card" class="completed-card hidden">
+                <div class="completed-icon">🎉</div>
+                <h3 class="completed-title">Download bereit!</h3>
+                <div id="completed-filename" class="completed-filename">video.mp4</div>
+                <div id="completed-size" class="completed-size"></div>
+
+                <div class="completed-actions">
+                    <button id="btn-download-file" class="btn btn-primary btn-block" type="button">
+                        ⬇️ Datei herunterladen
+                    </button>
+                    <button id="btn-share-file" class="btn btn-secondary btn-block" type="button" title="Über iOS Teilen-Dialog in Dateien sichern">
+                        📤 In Dateien sichern / Teilen
+                    </button>
+                    <button id="btn-reset-view" class="btn btn-secondary btn-block btn-sm" type="button">
+                        Weiteres Video analysieren
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: VERLAUF                            -->
+        <!-- ========================================== -->
+        <section id="tab-history" class="tab-view hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 1.15rem; font-weight: 700;">Download-Verlauf</h2>
+                <button id="btn-clear-history" class="btn btn-secondary btn-sm" style="display: none;">
+                    Verlauf leeren
+                </button>
+            </div>
+
+            <div id="history-list" class="history-list"></div>
+
+            <div id="history-empty" class="empty-state">
+                <div class="empty-state-icon">📂</div>
+                <p>Noch keine Downloads im Verlauf.</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Heruntergeladene Videos erscheinen hier zur schnellen Wiederverwendung.</p>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: EINSTELLUNGEN                      -->
+        <!-- ========================================== -->
+        <section id="tab-settings" class="tab-view hidden">
+            <!-- Server Konfiguration -->
+            <div class="settings-section">
+                <h3 class="section-title">🌐 API-Server Verbindung</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                    Trage hier die Adresse deines privaten Download-Servers ein (z. B. lokale LAN-IP oder Domain).
+                </p>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label for="settings-api-url" class="form-label">Server-Basis-URL</label>
+                    <input type="url" id="settings-api-url" class="form-input" placeholder="http://192.168.178.x:8000">
+                    <div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted); align-self: center;">Schnellauswahl:</span>
+                        <button type="button" class="btn btn-secondary btn-sm url-preset-btn" data-url="http://localhost:8000">localhost:8000</button>
+                        <button type="button" class="btn btn-secondary btn-sm url-preset-btn" data-url="http://127.0.0.1:8000">127.0.0.1:8000</button>
+                        <button type="button" class="btn btn-secondary btn-sm url-preset-btn" data-url="http://192.168.178.20:8000">WLAN (192.168.178.20)</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button id="btn-test-connection" class="btn btn-secondary btn-sm" type="button">
+                        Verbindung testen
+                    </button>
+                    <button id="btn-reset-api-url" class="btn btn-secondary btn-sm" type="button">
+                        Auf Standard zurücksetzen
+                    </button>
+                </div>
+
+                <div id="connection-test-result" class="test-result hidden"></div>
+            </div>
+
+            <!-- Download Standards -->
+            <div class="settings-section">
+                <h3 class="section-title">⚙️ Download-Standards</h3>
+                
+                <div class="options-grid">
+                    <div class="form-group">
+                        <label for="settings-default-mode" class="form-label">Standard-Modus</label>
+                        <select id="settings-default-mode" class="form-select">
+                            <option value="video">Video</option>
+                            <option value="audio">Nur Audio</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="settings-default-quality" class="form-label">Bevorzugte Videoqualität</label>
+                        <select id="settings-default-quality" class="form-select">
+                            <option value="best">Beste Qualität</option>
+                            <option value="1080p">1080p (Full HD)</option>
+                            <option value="720p">720p (HD)</option>
+                            <option value="480p">480p (SD)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="toggle-wrapper">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">Automatisch herunterladen</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Startet den Download direkt nach erfolgreicher Analyse</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="settings-auto-download">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="toggle-wrapper" style="border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px;">
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.9rem;">Download-Verlauf speichern</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Speichert Metadaten lokal im Browser (keine Videodateien)</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="settings-save-history" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Erscheinungsbild -->
+            <div class="settings-section">
+                <h3 class="section-title">🎨 Erscheinungsbild</h3>
+                <div class="form-group">
+                    <label for="settings-theme" class="form-label">Theme</label>
+                    <select id="settings-theme" class="form-select">
+                        <option value="dark">Dunkel (Standard)</option>
+                        <option value="oled">Schwarz (OLED iPad Display)</option>
+                        <option value="light">Hell</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Speichern Button -->
+            <button id="btn-save-settings" class="btn btn-primary btn-block" type="button" style="margin-bottom: 24px;">
+                Einstellungen speichern
+            </button>
+
+            <!-- Entwickler & Diagnose -->
+            <div class="settings-section">
+                <h3 class="section-title">🛠️ Entwickler & Diagnose</h3>
+                <div id="debug-logs-container" class="debug-logs-container">
+                    <div class="empty-hint">Keine Fehler oder Warnungen protokolliert.</div>
+                </div>
+                <button id="btn-clear-logs" class="btn btn-secondary btn-sm" type="button">
+                    Logs löschen
+                </button>
+            </div>
+
+            <!-- Rechtlicher Hinweis -->
+            <div class="legal-box">
+                ⚖️ <strong>Rechtlicher Hinweis:</strong> Nutze diese persönliche Web-Anwendung nur für Inhalte, für deren Download und Konvertierung du die erforderlichen Rechte bzw. Erlaubnisse besitzt. Die Anwendung umgeht keine DRM-, Paywall- oder Zugriffsschutzmechanismen.
+            </div>
+        </section>
+    </div>
+
+    <!-- Container für Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="storage.js"></script>
+    <script src="ui.js"></script>
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
